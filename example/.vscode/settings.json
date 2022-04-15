@@ -1,3 +1,6 @@
 {
-    "typescript.tsdk": "node_modules/typescript/lib"
+    "typescript.tsdk": "./node_modules/typescript/lib",
+    // tail -f ~/Library/Application\ Support/Code/logs/**/tsserver.log
+    "typescript.tsserver.log": "verbose",
+    "typescript.enablePromptUseWorkspaceTsdk": true
 }

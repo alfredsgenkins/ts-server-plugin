@@ -3,7 +3,11 @@
     "version": "0.0.1",
     "license": "MIT",
     "main": "./out",
+    "scripts": {
+        "start": "tsc --watch --sourceMap --outDir ./out"
+    },
     "dependencies": {
+        "tsc": "^2.0.4",
         "typescript": "^4.4.3"
     }
 }
