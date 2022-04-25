@@ -5,8 +5,22 @@
  * @extends me
  **/
 class Abc {
+    static method3() {
+        return '123';
+    }
+
+    a = () => {
+        console.log(123);
+    };
+
     method(a: string, b: number): string {
         return "Hello World" + b;
+    }
+
+    method2() {
+        /** @namespace Test */
+        const test = () => {};
+        this.method("Hello", 2);
     }
 }
 

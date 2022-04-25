@@ -5,7 +5,12 @@ const pluginForMethod = () => {
 export default {
     'Hello/World': {
         'member-function': {
-            method: pluginForMethod
+            method: pluginForMethod,
+            method3: () => 123,
+            a: () => 11
         }
+    },
+    'Test': {
+        'function': pluginForMethod
     }
 }
