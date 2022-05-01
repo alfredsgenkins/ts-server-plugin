@@ -50,24 +50,25 @@ export class NodeUtils {
     getNodeChildByCondition(
         node: ts.Node,
         cond: (n: ts.Node) => boolean,
-        maxDepth: number = Number.POSITIVE_INFINITY
+        maxDepth: number = Number.POSITIVE_INFINITY,
+        validateNode: Boolean = true
     ): ts.Node[] {
         const result: ts.Node[] = [];
 
-        const find = (node: ts.Node, depth: number) => {
+        const find = (node: ts.Node, depth: number, validateNode: Boolean) => {
             if (depth > maxDepth) return;
 
-            if (cond(node)) {
+            if (validateNode && cond(node)) {
                 result.push(node);
                 return;
             } else {
                 for (let i = 0; i < node.getChildren().length; i++) {
-                    find(node.getChildren()[i], depth + 1);
+                    find(node.getChildren()[i], depth + 1, true);
                 }
             }
         }
 
-        find(node, 0);
+        find(node, 0, validateNode);
 
         return result;
     }

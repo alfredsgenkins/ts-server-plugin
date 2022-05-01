@@ -20,7 +20,8 @@ export class NamespacePropertyAssignment {
             return '';
         }
 
-        return namespace.getText();
+        // this removes all quotes
+        return namespace.getText().replace(/['"]/gm, '');
     }
 
     getNamespace(): ts.Node | undefined {
@@ -48,8 +49,10 @@ export class NamespacePropertyAssignment {
             return undefined;
         }
 
+        const nIndex = namespace.getFullText().indexOf(namespace.getText());
+
         return {
-            start: namespace.pos,
+            start: namespace.pos + nIndex,
             length: namespace.getText().length
         }
     }
@@ -82,38 +85,59 @@ export class NamespacePropertyAssignment {
     }
 
     static constructFromNode(ctx: Ctx, node: ts.Node): NamespacePropertyAssignment | undefined {
-        const pluginNode = ctx.nodeUtils.getParentNodeByCondition(node, (pNode) => (
-            pNode.kind === ts.SyntaxKind.PropertyAssignment
-            // ^^^ it is a property assignment
-            && ctx.nodeUtils.getNodeChildByCondition(pNode, (cNode) => (
-                // ^^^ and has at least one child that ...
-                (
-                    cNode.kind === ts.SyntaxKind.StringLiteral
-                    || cNode.kind === ts.SyntaxKind.Identifier
-                    // ^^^ is StringLiteral or Identifier
-                ) && (
-                    (
-                        !!cNode.getText().match(/^["']*(member-function|member-property|static-member)["']*$/gm)
-                        // ^^^ is member-function, member-property or static-member
-                        && ctx.nodeUtils.getNodeChildByCondition(cNode, (cNode2) => (
-                            // and has at least one child that ...
-                            (
-                                cNode2.kind === ts.SyntaxKind.StringLiteral
-                                || cNode2.kind === ts.SyntaxKind.Identifier
-                            )
-                            // ^^^ is StringLiteral or Identifier
-                        )).length > 0
-                    ) || (
-                        !!cNode.getText().match(/^["']*(function)["']*$/gm)
-                        // ^^^ is function
-                    )
-                )
-            )).length > 0
-        ));
+        // We need to find a property assignment,
+        // which has another property assignment inside
+        // which has an identifier (of member-* or function)
 
-        if (!pluginNode) return undefined;
+        const pluginNamespaceDeclaration = ctx.nodeUtils.getParentNodeByCondition(node, (namespacePANode) => {
+            const isPropertyAssignment = namespacePANode.kind === ts.SyntaxKind.PropertyAssignment;
 
-        return new NamespacePropertyAssignment(ctx, pluginNode);
+            if (!isPropertyAssignment) {
+                return false;
+            }
+
+            const pluginTypeDeclarations = ctx.nodeUtils.getNodeChildByCondition(namespacePANode, (typePANode) => {
+                const isPropertyAssignment = typePANode.kind === ts.SyntaxKind.PropertyAssignment;
+
+                if (!isPropertyAssignment) {
+                    return false;
+                }
+
+                const hasPluginTypeDeclaration = typePANode.getChildren().some((typeIdentifierNode) => {
+                    const isIdentifier = typeIdentifierNode.kind === ts.SyntaxKind.StringLiteral
+                        || typeIdentifierNode.kind === ts.SyntaxKind.Identifier;
+
+                    if (!isIdentifier) {
+                        return false;
+                    }
+
+                    const hasClassPropertyPlugins = !!typeIdentifierNode.getText().match(/^["']*(member-function|member-property|static-member)["']*$/gm);
+                    // ^^^ is member-function, member-property or static-member
+
+                    if (!hasClassPropertyPlugins) {
+                        // ^^^ can only then be a function
+                        const hasFunctionPlugins = !!typeIdentifierNode.getText().match(/^["']*(function)["']*$/gm);
+                        return hasFunctionPlugins;
+                    }
+
+                    // lookup pNode for plugin implementation references
+                    const childMethodAssignments = ctx.nodeUtils.getNodeChildByCondition(typePANode, (implementationPANode) => {
+                        const isPropertyAssignment = implementationPANode.kind === ts.SyntaxKind.PropertyAssignment;
+                        return isPropertyAssignment;
+                    }, 3, false);
+
+                    return childMethodAssignments.length > 0;
+                });
+
+                return hasPluginTypeDeclaration;
+            }, 3, false);
+
+            return pluginTypeDeclarations.length > 0;
+        });
+
+        if (!pluginNamespaceDeclaration) return undefined;
+
+        return new NamespacePropertyAssignment(ctx, pluginNamespaceDeclaration);
     }
 }
 
@@ -203,17 +227,19 @@ export const getPluginRefNodeForTargetNode = (ctx: Ctx, plugin: NamespacePropert
     const node = plugin.getMethodReference(lookupString);
     if (!node) return;
 
-    return ctx.nodeUtils.getFileNodeAtPosition(
-        plugin.node.getSourceFile().fileName,
-        node.pos
-    );
+    return node;
 };
 
 export const getPluginReferenceForTargetNode = (ctx: Ctx, plugin: NamespacePropertyAssignment, targetNode: ts.Node): ts.ReferenceEntry | undefined => {
     const refNode = getPluginRefNodeForTargetNode(ctx, plugin, targetNode);
     if (!refNode) return;
 
-    const assignmentNode = refNode.parent.getChildren()[2];
+    const [assignmentNode] = ctx.nodeUtils.getNodeChildByCondition(
+        refNode.parent,
+        (node) => node.kind === ts.SyntaxKind.Identifier,
+        1
+    );
+
     if (!assignmentNode) return;
 
     const assignmentIndex = assignmentNode.getFullText().indexOf(assignmentNode.getText());
@@ -250,5 +276,23 @@ export const implementationNodeReferenceEntries = (ctx: Ctx, node: ts.Node): ts.
     const references: ts.ReferenceEntry[] = [];
     const plugin = NamespacePropertyAssignment.constructFromNode(ctx, node);
     if (!plugin) return references;
+    const namespace = plugin.getNamespaceString();
+    if (!namespace) return references;
+    const program = ctx.info.project.getLanguageService().getProgram();
+    if (!program) return references;
+    const sourceFiles = program.getSourceFiles();
+    if (!sourceFiles) return references;
+
+    for (const sourceFile of sourceFiles) {
+        const nsMatch = new RegExp(`@namespace\\s+${namespace}`).exec(sourceFile.getFullText());
+        if (!nsMatch) continue;
+
+        const nsMatchString = nsMatch[0];
+        const nsIndex = nsMatch.index + nsMatchString.indexOf(namespace);
+        const nsNode = ctx.nodeUtils.getFileNodeAtPosition(sourceFile.fileName, nsIndex);
+
+        // TODO: construct comment from it
+    }
+
     return references;
 };
