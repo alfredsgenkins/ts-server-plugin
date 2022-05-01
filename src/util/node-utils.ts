@@ -78,4 +78,35 @@ export class NodeUtils {
         if (!sourceFile) return [];
         return this.getNodeChildByCondition(sourceFile, cond);
     };
+
+    getTextSpanForNode(node: ts.Node): ts.TextSpan | undefined {
+        const nIndex = node.getFullText().indexOf(node.getText());
+
+        if (!nIndex) {
+            return {
+                start: node.pos,
+                length: node.end - node.pos
+            }
+        }
+
+        return {
+            start: node.pos + nIndex,
+            length: node.getText().length
+        }
+    }
+
+    getReferenceForNode(
+        node: ts.Node,
+        textSpanGetter: (node: ts.Node) => ts.TextSpan | undefined = this.getTextSpanForNode
+    ): ts.ReferenceEntry | undefined {
+        const textSpan = textSpanGetter(node);
+        if (!textSpan) return undefined;
+
+        return {
+            textSpan,
+            fileName: node.getSourceFile().fileName,
+            isWriteAccess: true, // TODO: get if this plugin is editable
+            isDefinition: false,
+        }
+    }
 }

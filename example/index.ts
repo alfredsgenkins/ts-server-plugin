@@ -9,6 +9,10 @@ class Abc {
         return '123';
     }
 
+    method3() {
+        return '444';
+    }
+
     a = () => {
         console.log(123);
     };

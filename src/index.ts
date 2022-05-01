@@ -1,11 +1,11 @@
 import ts from "typescript/lib/tsserverlibrary";
-import { getCommentAtPosition } from './comment';
-import { Ctx } from "./context";
+import { getCommentAtPosition } from './declaration';
+import { Ctx } from "./util/context";
 import {
     pluginNodeReferenceEntries,
     getNamespacePluginsReferences,
     implementationNodeReferenceEntries
-} from "./plugins";
+} from "./reference";
 
 function init() {
     function create(info: ts.server.PluginCreateInfo) {
@@ -72,32 +72,6 @@ function init() {
                 definitions: [comment.getDefinition()]
             };
         };
-
-        // proxy.getQuickInfoAtPosition = (fileName: string, position: number): ts.QuickInfo | undefined => {
-        //     const prior = info.languageService.getQuickInfoAtPosition(fileName, position);
-        //     if (prior) return prior; // <-- do not proxy, if element is recognized
-
-        //     const comment = getCommentAtPosition(ctx, fileName, position);
-        //     if (!comment) return undefined; // <-- this is not a comment, skip
-
-        //     return comment.getQuickInfo();
-        // }
-
-        // proxy.getDocumentHighlights = (fileName: string, position: number, filesToSearch: string[]): ts.DocumentHighlights[] | undefined => {
-        //     const prior = info.languageService.getDocumentHighlights(fileName, position, filesToSearch);
-        //     if (prior) return prior; // <-- do not proxy, if element is recognized
-
-        //     const comment = getCommentAtPosition(ctx, fileName, position);
-        //     if (!comment) return undefined; // <-- this is not a comment, skip
-
-        //     return [{
-        //         fileName: fileName,
-        //         highlightSpans: [{
-        //             textSpan: comment.getTextSpan(),
-        //             kind: ts.HighlightSpanKind.reference
-        //         }]
-        //     }];
-        // };
 
         return proxy;
     }
