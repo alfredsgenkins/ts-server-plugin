@@ -10,6 +10,7 @@ import {
     PluginReferenceConfig,
     PluginTargetConfig
 } from "./util/config";
+import { Cache } from "./cache";
 
 export class NamespaceReference {
     node: ts.Node;
@@ -209,50 +210,8 @@ export class NamespaceReference {
     }
 }
 
-export const getPluginsForNamespace = (ctx: Ctx, comment: NamespaceDeclaration): NamespaceReference[] => {
-    const namespace = comment.getNamespace();
-
-    const program = ctx.info.project.getLanguageService().getProgram();
-    if (!program) return [];
-
-    const sourceFiles = program.getSourceFiles();
-    if (!sourceFiles) return [];
-
-    const pluginFiles = sourceFiles.filter((sourceFile) => sourceFile.fileName.includes('.plugin'));
-    if (!pluginFiles.length) return [];
-
-    const plugins: NamespaceReference[] = [];
-
-    for (const pluginFile of pluginFiles) {
-        const namespaceNode = ctx.nodeUtils.getNodeChildByCondition(pluginFile, (node) => (
-            (
-                ts.isStringLiteral(node)
-                || ts.isIdentifier(node)
-                // ^^^ is StringLiteral or Identifier
-            ) && node.getText().indexOf(namespace) !== -1
-        ));
-
-        if (!namespaceNode.length) continue;
-
-        let plugin: NamespaceReference | undefined;
-        let i = 0;
-
-        while (!plugin && i < namespaceNode.length) {
-            // vvv constructing from node to ensure validation
-            plugin = NamespaceReference.constructFromNode(ctx, namespaceNode[i]);
-            i++;
-        }
-
-        if (!plugin) continue;
-
-        plugins.push(plugin);
-    }
-
-    return plugins;
-};
-
-export const getNamespacePluginsReferences = (ctx: Ctx, comment: NamespaceDeclaration): ts.ReferencedSymbol[] => {
-    const plugins = getPluginsForNamespace(ctx, comment);
+export const getNamespacePluginsReferences = (ctx: Ctx, cache: Cache, comment: NamespaceDeclaration): ts.ReferencedSymbol[] => {
+    const plugins = cache.getReferencesByNamespace(comment.getNamespace());
     const validPluginReferences: ts.ReferencedSymbol[] = [];
 
     for (const plugin of plugins) {
@@ -274,7 +233,7 @@ export const getNamespacePluginsReferences = (ctx: Ctx, comment: NamespaceDeclar
     return validPluginReferences;
 }
 
-export const pluginNodeReferenceEntries = (ctx: Ctx, node: ts.Node): ts.ReferenceEntry[] => {
+export const pluginNodeReferenceEntries = (ctx: Ctx, cache: Cache, node: ts.Node): ts.ReferenceEntry[] => {
     const references: ts.ReferenceEntry[] = [];
 
     const comment = NamespaceDeclaration.constructFromNode(ctx, node);
@@ -282,8 +241,7 @@ export const pluginNodeReferenceEntries = (ctx: Ctx, node: ts.Node): ts.Referenc
 
     const targetConfig = comment.getTargetConfigForNode(node);
     if (!targetConfig) return references;
-
-    const plugins = getPluginsForNamespace(ctx, comment);
+    const plugins = cache.getReferencesByNamespace(comment.getNamespace());
     if (!plugins.length) return references;
 
     for (const plugin of plugins) {
@@ -296,44 +254,30 @@ export const pluginNodeReferenceEntries = (ctx: Ctx, node: ts.Node): ts.Referenc
     return references;
 };
 
-export const implementationNodeReferenceEntries = (ctx: Ctx, node: ts.Node): ts.ReferenceEntry[] => {
+export const implementationNodeReferenceEntries = (ctx: Ctx, cache: Cache, node: ts.Node): ts.ReferenceEntry[] => {
     const references: ts.ReferenceEntry[] = [];
     const plugin = NamespaceReference.constructFromNode(ctx, node);
     if (!plugin) return references;
     const namespace = plugin.getNamespaceString();
     if (!namespace) return references;
-    const program = ctx.info.project.getLanguageService().getProgram();
-    if (!program) return references;
-    const sourceFiles = program.getSourceFiles();
-    if (!sourceFiles) return references;
+    const nsDeclaration = cache.getDeclarationByNamespace(namespace);
+    if (!nsDeclaration) return references;
     const targetConfig = plugin.getTargetConfigForNode(node);
 
-    for (const sourceFile of sourceFiles) {
-        const nsMatch = new RegExp(`@namespace\\s+${namespace}`).exec(sourceFile.getFullText());
-        if (!nsMatch) continue;
+    let reference = undefined;
 
-        const nsMatchString = nsMatch[0];
-        const nsIndex = nsMatch.index + nsMatchString.indexOf(namespace);
-        const nsDeclarationNode = ctx.nodeUtils.getFileNodeAtPosition(sourceFile.fileName, nsIndex);
-        if (!nsDeclarationNode) continue;
-        const nsDeclaration = NamespaceDeclaration.constructFromNode(ctx, nsDeclarationNode);
-        if (!nsDeclaration) continue;
-
-        let reference = undefined;
-
-        if (!targetConfig) {
-            const isNamespaceNode = node.getText().indexOf(namespace) !== -1;
-            if (!isNamespaceNode) continue;
-            reference = nsDeclaration.getNamespaceReference();
-        } else {
-            const nodeToReference = nsDeclaration.getNodeByTargetConfig(targetConfig);
-            if (!nodeToReference) continue;
-            reference = ctx.nodeUtils.getReferenceForNode(nodeToReference);
-        }
-
-        if (!reference) continue;
-        references.push(reference);
+    if (!targetConfig) {
+        const isNamespaceNode = node.getText().indexOf(namespace) !== -1;
+        if (!isNamespaceNode) return references;
+        reference = nsDeclaration.getNamespaceReference();
+    } else {
+        const nodeToReference = nsDeclaration.getNodeByTargetConfig(targetConfig);
+        if (!nodeToReference) return references;
+        reference = ctx.nodeUtils.getReferenceForNode(nodeToReference);
     }
 
+    if (!reference) return references;
+
+    references.push(reference);
     return references;
 };
