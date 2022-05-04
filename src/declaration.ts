@@ -9,6 +9,11 @@ import {
     PluginTargetConfig
 } from "./util/config";
 
+
+export function isNamespaceJSDocTag(tag: ts.JSDocTag): tag is ts.JSDocTag {
+    return tag.tagName.escapedText === "namespace";
+}
+
 export class NamespaceDeclaration {
     node: ts.Node;
     ctx: Ctx;
@@ -93,7 +98,7 @@ export class NamespaceDeclaration {
     getTargetConfigForNode(node: ts.Node): PluginTargetConfig | undefined {
         const targetMainType = this.node.parent.parent;
 
-        if (targetMainType.kind === ts.SyntaxKind.ClassDeclaration) {
+        if (ts.isClassDeclaration(targetMainType)) {
             const name = node.getText();
 
             const target = node.parent;
@@ -103,12 +108,16 @@ export class NamespaceDeclaration {
                 return { name, type: CLASS_PLUGIN_STATIC_TYPE };
             }
 
-            if (target.kind === ts.SyntaxKind.PropertyDeclaration) {
-                // TODO: investigate arrow functions special case :/
+            if (ts.isPropertyDeclaration(target)) {
+                if (target.initializer && ts.isArrowFunction(target.initializer)) {
+                    // ^^^ special case for arrow functions !!!
+                    return { name, type: CLASS_PLUGIN_METHOD_TYPE };
+                }
+
                 return { name, type: CLASS_PLUGIN_PROPERTY_TYPE };
             }
 
-            if (target.kind === ts.SyntaxKind.MethodDeclaration) {
+            if (ts.isMethodDeclaration(target)) {
                 return { name, type: CLASS_PLUGIN_METHOD_TYPE };
             }
 
@@ -116,8 +125,8 @@ export class NamespaceDeclaration {
         }
 
         if (
-            targetMainType.kind === ts.SyntaxKind.FunctionDeclaration
-            || targetMainType.kind === ts.SyntaxKind.VariableDeclaration
+            ts.isFunctionDeclaration(targetMainType)
+            || ts.isVariableDeclaration(targetMainType)
         ) {
             return { name: 'unknown', type: FUNCTION_PLUGIN_TYPE };
         }
@@ -137,8 +146,8 @@ export class NamespaceDeclaration {
             type === FUNCTION_PLUGIN_TYPE
         ) {
             if (
-                targetMainType.kind === ts.SyntaxKind.FunctionDeclaration
-                || targetMainType.kind === ts.SyntaxKind.VariableDeclaration
+                ts.isFunctionDeclaration(targetMainType)
+                || ts.isVariableDeclaration(targetMainType)
             ) {
                 return targetMainType
             }
@@ -146,31 +155,36 @@ export class NamespaceDeclaration {
             return undefined;
         }
 
-        if (targetMainType.kind !== ts.SyntaxKind.ClassDeclaration) {
+        if (!ts.isClassDeclaration(targetMainType)) {
             return undefined;
         }
 
         const matchingTarget = this.ctx.nodeUtils.getNodeChildByCondition(targetMainType, (node) => {
             if (
-                node.kind !== ts.SyntaxKind.Identifier
-                || node.getText() !== name
+                !ts.isIdentifier(node)
+                || node.escapedText !== name
             ) {
                 return false;
             }
 
             const parent = node.parent;
+            const isStatic = !!parent.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword);
 
-            if (!!parent.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword)) {
+            if (isStatic) {
                 return type === CLASS_PLUGIN_STATIC_TYPE;
             }
 
             return (
                 (
                     type === CLASS_PLUGIN_METHOD_TYPE
-                    && parent.kind === ts.SyntaxKind.MethodDeclaration
+                    && (
+                        ts.isMethodDeclaration(parent)
+                        || ts.isPropertyDeclaration(parent)
+                        // ^^^ special case for arrow functions !!!
+                    )
                 ) || (
                     type === CLASS_PLUGIN_PROPERTY_TYPE
-                    && parent.kind === ts.SyntaxKind.PropertyDeclaration
+                    && ts.isPropertyDeclaration(parent)
                 )
             );
         });
@@ -184,19 +198,13 @@ export class NamespaceDeclaration {
         let namespaceDeclarationNode: ts.Node | undefined;
 
         ctx.nodeUtils.getParentNodeByCondition(node, (parent) => {
-            const JSDocComment = parent.getChildren().find((child) => child.kind === ts.SyntaxKind.JSDocComment);
+            const [jsDocTag] = ts.getAllJSDocTags(parent, isNamespaceJSDocTag);
 
-            if (!JSDocComment) return false;
+            if (!jsDocTag) {
+                return false;
+            }
 
-            const JSDocNamespaceTag = JSDocComment.getChildren().find((child) => (
-                child.kind === ts.SyntaxKind.JSDocTag
-                && child.getText().indexOf('@namespace') !== -1
-            ));
-
-            if (!JSDocNamespaceTag) return false;
-
-            namespaceDeclarationNode = JSDocNamespaceTag;
-
+            namespaceDeclarationNode = jsDocTag;
             return true;
         });
 
@@ -211,8 +219,9 @@ export const getCommentAtPosition = (ctx: Ctx, fileName: string, position: numbe
     if (!node) return undefined;
 
     if (
+        // vvv Forced to use this, as there is not built-in check for JsDocTag
         node.kind !== ts.SyntaxKind.JSDocTag
-        || node.getText().indexOf('@namespace') === -1
+        || (node as ts.JSDocTag).tagName.escapedText !== 'namespace'
     ) {
         return undefined;
     }

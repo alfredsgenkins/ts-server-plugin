@@ -42,10 +42,7 @@ export class NamespaceReference {
 
         const [namespace] = this.ctx.nodeUtils.getNodeChildByCondition(
             this.node,
-            (node) => (
-                node.kind === ts.SyntaxKind.StringLiteral
-                || node.kind === ts.SyntaxKind.Identifier
-            ),
+            (node) => ts.isStringLiteral(node) || ts.isIdentifier(node),
             1 // look for the first child only
         );
 
@@ -129,7 +126,7 @@ export class NamespaceReference {
         let pluginReferenceConfig: PluginReferenceConfig = createNewPluginReferenceConfig();
 
         const pluginNamespaceDeclaration = ctx.nodeUtils.getParentNodeByCondition(node, (namespacePANode) => {
-            const isPropertyAssignment = namespacePANode.kind === ts.SyntaxKind.PropertyAssignment;
+            const isPropertyAssignment = ts.isPropertyAssignment(namespacePANode);
 
             if (!isPropertyAssignment) {
                 return false;
@@ -139,15 +136,14 @@ export class NamespaceReference {
             // ^^^ reset for each parent (previous was not correct)
 
             const pluginTypeDeclarations = ctx.nodeUtils.getNodeChildByCondition(namespacePANode, (typePANode) => {
-                const isPropertyAssignment = typePANode.kind === ts.SyntaxKind.PropertyAssignment;
+                const isPropertyAssignment = ts.isPropertyAssignment(typePANode);
 
                 if (!isPropertyAssignment) {
                     return false;
                 }
 
                 const pluginTypeDeclarations = typePANode.getChildren().find((typeIdentifierNode) => {
-                    const isIdentifier = typeIdentifierNode.kind === ts.SyntaxKind.StringLiteral
-                        || typeIdentifierNode.kind === ts.SyntaxKind.Identifier;
+                    const isIdentifier = ts.isStringLiteral(typeIdentifierNode) || ts.isIdentifier(typeIdentifierNode)
 
                     if (!isIdentifier) {
                         return false;
@@ -168,15 +164,15 @@ export class NamespaceReference {
                     ) {
                         // vvv lookup pNode for plugin implementation references
                         const childMethodAssignments = ctx.nodeUtils.getNodeChildByCondition(typePANode, (implementationPANode) => {
-                            const isPropertyAssignment = implementationPANode.kind === ts.SyntaxKind.PropertyAssignment;
+                            const isPropertyAssignment = ts.isPropertyAssignment(implementationPANode)
 
                             if (!isPropertyAssignment) {
                                 return false;
                             }
 
                             const pluginImplementationDeclarationNodes = implementationPANode.getChildren().find((implementationDeclarationNode) => {
-                                const isIdentifier = implementationDeclarationNode.kind === ts.SyntaxKind.StringLiteral
-                                    || implementationDeclarationNode.kind === ts.SyntaxKind.Identifier;
+                                const isIdentifier = ts.isStringLiteral(implementationDeclarationNode)
+                                    || ts.isIdentifier(implementationDeclarationNode)
 
                                 if (!isIdentifier) {
                                     return false;
@@ -230,8 +226,8 @@ export const getPluginsForNamespace = (ctx: Ctx, comment: NamespaceDeclaration):
     for (const pluginFile of pluginFiles) {
         const namespaceNode = ctx.nodeUtils.getNodeChildByCondition(pluginFile, (node) => (
             (
-                node.kind === ts.SyntaxKind.StringLiteral
-                || node.kind === ts.SyntaxKind.Identifier
+                ts.isStringLiteral(node)
+                || ts.isIdentifier(node)
                 // ^^^ is StringLiteral or Identifier
             ) && node.getText().indexOf(namespace) !== -1
         ));
