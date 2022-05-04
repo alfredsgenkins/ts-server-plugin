@@ -28,10 +28,10 @@ function init() {
             proxy[k] = (...args: Array<{}>) => x.apply(info.languageService, args);
         }
 
-        proxy.getSyntacticDiagnostics = (fileName: string): ts.DiagnosticWithLocation[] => {
-            const diagnostics = info.languageService.getSyntacticDiagnostics(fileName);
+        proxy.getSemanticDiagnostics = (fileName: string): ts.Diagnostic[] => {
+            const diagnostics = info.languageService.getSemanticDiagnostics(fileName);
             cache.refreshFileCache(fileName);
-            return diagnostics;
+            return [...diagnostics, ...cache.getDiagnosticsByFile(fileName)];
         };
 
         // // is called on every change

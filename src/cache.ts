@@ -41,7 +41,7 @@ export class Cache {
         }
     }
 
-    refreshBySourceFile(sourceFile: ts.SourceFile) {
+    refreshBySourceFile(sourceFile: ts.SourceFile): void {
         const fileName = sourceFile.fileName;
 
         if (fileName.indexOf('.plugin') !== -1) {
@@ -125,5 +125,38 @@ export class Cache {
         }
 
         return this.declarationMap[namespace];
+    }
+
+    getDiagnosticsByFile(fileName: string): ts.Diagnostic[] {
+        const refsOrDecs = this.fileToNamespaceMap[fileName] || [];
+
+        return refsOrDecs.reduce((
+            acc: ts.Diagnostic[],
+            refOrDec: NamespaceDeclaration | NamespaceReference
+        ) => {
+            if (refOrDec instanceof NamespaceReference) {
+                const namespace = refOrDec.getNamespaceString();
+                const declaration = this.getDeclarationByNamespace(namespace);
+                const sourceFile = refOrDec.getNamespace()?.getSourceFile();
+                if (!sourceFile) return acc;
+                const textSpan = refOrDec.getNamespaceTextSpan();
+                if (!textSpan) return acc;
+
+                if (!declaration) {
+                    return [
+                        ...acc,
+                        {
+                            category: ts.DiagnosticCategory.Warning,
+                            file: sourceFile,
+                            messageText: "Such namespace is not declared",
+                            code: 191919,
+                            ...textSpan
+                        }
+                    ];
+                }
+            }
+
+            return acc;
+        }, [] as ts.Diagnostic[]);
     }
 }

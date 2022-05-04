@@ -51,24 +51,26 @@ export class NamespaceReference {
         return namespace;
     }
 
+    getNamespaceTextSpan = (): ts.TextSpan | undefined => {
+        if (!this.namespace) {
+            return undefined;
+        }
+
+        const nIndex = this.namespace.getFullText().indexOf(this.namespace.getText());
+
+        return {
+            start: this.namespace.pos + nIndex,
+            length: this.namespace.getText().length
+        }
+    }
+
     getNamespaceReference(): ts.ReferenceEntry | undefined {
         const namespace = this.getNamespace();
         if (!namespace) return undefined;
 
         return this.ctx.nodeUtils.getReferenceForNode(
             namespace,
-            (node: ts.Node): ts.TextSpan | undefined => {
-                if (!node) {
-                    return undefined;
-                }
-
-                const nIndex = node.getFullText().indexOf(node.getText());
-
-                return {
-                    start: node.pos + nIndex,
-                    length: node.getText().length
-                }
-            }
+            this.getNamespaceTextSpan
         );
     }
 

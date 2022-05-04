@@ -10,6 +10,9 @@ export default {
             a: () => 11
         }
     },
+    'Wrong/Namespace': {
+        'function': () => {}
+    },
     'Test': {
         'function': pluginForMethod
     }
