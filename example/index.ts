@@ -1,10 +1,6 @@
 // Edit this file to trigger the TSServer commands.
 
-class Bca {
-    method() {
-        return 123;
-    }
-}
+import { Bca } from "./aa";
 
 /**
  * @namespace Hello/World

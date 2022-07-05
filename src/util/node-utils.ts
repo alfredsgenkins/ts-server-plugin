@@ -7,6 +7,57 @@ export class NodeUtils {
         this.info = info;
     }
 
+    getClassNodeHeritage(node: ts.ClassDeclaration): ts.ClassDeclaration[] {
+        if (!node.heritageClauses) {
+            return [node];
+        }
+        
+        const extendsHeritageClauses = node.heritageClauses.filter((heritageClause) => (
+            heritageClause.token === ts.SyntaxKind.ExtendsKeyword
+            && heritageClause.types.length > 0
+        ));
+
+        return extendsHeritageClauses.reduce(
+            (
+                acc: ts.ClassDeclaration[],
+                extendsHeritageClause: ts.HeritageClause
+            ) => {
+                const identifierPosition = extendsHeritageClause.types[0].getStart()
+                const classDefintions = this.info.languageService.getDefinitionAtPosition(
+                    node.getSourceFile().fileName,
+                    identifierPosition
+                );
+                
+                if (!classDefintions || classDefintions.length <= 0) {
+                    return acc;
+                }
+
+                const [classDefintion] = classDefintions;
+
+                const defintionNode = this.getFileNodeAtPosition(
+                    classDefintion.fileName,
+                    classDefintion.textSpan.start
+                );
+
+                if (!defintionNode) {
+                    return acc;
+                }
+
+                const classDeclaration = this.getParentNodeByCondition(
+                    defintionNode,
+                    (node) => ts.isClassDeclaration(node)
+                );
+
+                if (!classDeclaration || !ts.isClassDeclaration(classDeclaration)) {
+                    return acc;
+                }
+
+                return [...acc, ...this.getClassNodeHeritage(classDeclaration)];
+            },
+            [node] as ts.ClassDeclaration[]
+        );
+    }
+
     getSourceFile(fileName: string): ts.SourceFile | undefined {
         const program = this.info.project.getLanguageService().getProgram();
         return program ? program.getSourceFile(fileName) : undefined;

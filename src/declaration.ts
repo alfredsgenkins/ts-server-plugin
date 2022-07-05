@@ -97,6 +97,7 @@ export class NamespaceDeclaration {
 
     getTargetConfigForNode(node: ts.Node): PluginTargetConfig | undefined {
         const targetMainType = this.node.parent.parent;
+        // ^^^ TODO: assume heritageClauses may be present
 
         if (ts.isClassDeclaration(targetMainType)) {
             const name = node.getText();
@@ -141,6 +142,7 @@ export class NamespaceDeclaration {
     getNodeByTargetConfig(config: PluginTargetConfig): ts.Node | undefined {
         const { type, name } = config;
         const targetMainType = this.node.parent.parent;
+        // ^^^ TODO: assume heritageClauses may be present
 
         if (
             type === FUNCTION_PLUGIN_TYPE
@@ -159,39 +161,49 @@ export class NamespaceDeclaration {
             return undefined;
         }
 
-        const matchingTarget = this.ctx.nodeUtils.getNodeChildByCondition(targetMainType, (node) => {
-            if (
-                !ts.isIdentifier(node)
-                || node.escapedText !== name
-            ) {
-                return false;
-            }
+        const heritage = this.ctx.nodeUtils.getClassNodeHeritage(targetMainType);
 
-            const parent = node.parent;
-            const isStatic = !!parent.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword);
-
-            if (isStatic) {
-                return type === CLASS_PLUGIN_STATIC_TYPE;
-            }
-
-            return (
-                (
-                    type === CLASS_PLUGIN_METHOD_TYPE
-                    && (
-                        ts.isMethodDeclaration(parent)
-                        || ts.isPropertyDeclaration(parent)
-                        // ^^^ special case for arrow functions !!!
+        for (let i = 0; i < heritage.length; i++) {
+            const classDec = heritage[i];
+            
+            const matchingTarget = this.ctx.nodeUtils.getNodeChildByCondition(classDec, (node) => {
+                if (
+                    !ts.isIdentifier(node)
+                    || node.escapedText !== name
+                ) {
+                    return false;
+                }
+    
+                const parent = node.parent;
+                const isStatic = !!parent.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword);
+    
+                if (isStatic) {
+                    return type === CLASS_PLUGIN_STATIC_TYPE;
+                }
+    
+                return (
+                    (
+                        type === CLASS_PLUGIN_METHOD_TYPE
+                        && (
+                            ts.isMethodDeclaration(parent)
+                            || ts.isPropertyDeclaration(parent)
+                            // ^^^ special case for arrow functions !!!
+                        )
+                    ) || (
+                        type === CLASS_PLUGIN_PROPERTY_TYPE
+                        && ts.isPropertyDeclaration(parent)
                     )
-                ) || (
-                    type === CLASS_PLUGIN_PROPERTY_TYPE
-                    && ts.isPropertyDeclaration(parent)
-                )
-            );
-        });
+                );
+            });
+    
+            if (matchingTarget.length > 0) {
+                return matchingTarget[0];
+            }
 
-        if (matchingTarget.length === 0) return undefined;
+            // ^^^ countinue the loop, if no results found
+        }
 
-        return matchingTarget[0];
+        return undefined;
     }
 
     static constructFromNode(ctx: Ctx, node: ts.Node): NamespaceDeclaration | undefined {
