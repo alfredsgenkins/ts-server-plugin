@@ -28,7 +28,7 @@ export class NamespaceDeclaration {
         this.node = commentNode;
     }
 
-    getNamespace(): string {
+    getNamespaceString(): string {
         if (this.namespace) {
             return this.namespace
         }
@@ -46,14 +46,14 @@ export class NamespaceDeclaration {
             return this.nIndex;
         }
 
-        const namespace = this.getNamespace();
+        const namespace = this.getNamespaceString();
         const nIndex = this.node.getText().indexOf(namespace);
         this.nIndex = nIndex;
         return nIndex;
     }
 
     getTextSpan = (): ts.TextSpan => {
-        const namespace = this.getNamespace();
+        const namespace = this.getNamespaceString();
         const nIndex = this.getNamespaceIndex();
 
         return {
@@ -63,7 +63,7 @@ export class NamespaceDeclaration {
     }
 
     getDisplayParts(): ts.SymbolDisplayPart[] {
-        const namespace = this.getNamespace();
+        const namespace = this.getNamespaceString();
 
         return [{
             kind: 'text',
@@ -72,7 +72,7 @@ export class NamespaceDeclaration {
     }
 
     getDefinition(): ts.DefinitionInfo {
-        const namespace = this.getNamespace();
+        const namespace = this.getNamespaceString();
 
         return {
             kind: ts.ScriptElementKind.unknown,

@@ -3,11 +3,10 @@ export const CLASS_PLUGIN_PROPERTY_TYPE = 'member-property';
 export const CLASS_PLUGIN_METHOD_TYPE = 'member-function';
 export const CLASS_PLUGIN_STATIC_TYPE = 'static-member';
 
-export const CLASS_PLUGIN_TYPES = [
-    CLASS_PLUGIN_PROPERTY_TYPE,
-    CLASS_PLUGIN_METHOD_TYPE,
-    CLASS_PLUGIN_STATIC_TYPE,
-];
+export type ClassPluginTypes =
+    typeof CLASS_PLUGIN_PROPERTY_TYPE
+    | typeof CLASS_PLUGIN_METHOD_TYPE
+    | typeof CLASS_PLUGIN_STATIC_TYPE;
 
 export const FUNCTION_PLUGIN_TYPE = 'function';
 
@@ -32,3 +31,8 @@ export type PluginTargetConfig = {
         | typeof CLASS_PLUGIN_STATIC_TYPE
         | typeof FUNCTION_PLUGIN_TYPE,
 }
+
+export type DiagnosticMessage = {
+    messageText: string;
+    code: number;
+};

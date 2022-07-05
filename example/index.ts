@@ -1,10 +1,16 @@
 // Edit this file to trigger the TSServer commands.
 
+class Bca {
+    method() {
+        return 123;
+    }
+}
+
 /**
  * @namespace Hello/World
  * @extends me
  **/
-class Abc {
+class Abc extends Bca {
     static method3() {
         return '123';
     }
@@ -17,14 +23,10 @@ class Abc {
         console.log(123);
     };
 
-    method(a: string, b: number): string {
-        return "Hello World" + b;
-    }
-
     method2() {
         /** @namespace Test */
         const test = () => {};
-        this.method("Hello", 2);
+        this.method();
     }
 }
 

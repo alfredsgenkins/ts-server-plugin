@@ -7,7 +7,8 @@ export default {
         'member-function': {
             method: pluginForMethod,
             method3: () => 123,
-            a: () => 11
+            a: () => 11,
+            b: () => 11,
         }
     },
     'Wrong/Namespace': {

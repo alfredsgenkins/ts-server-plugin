@@ -121,99 +121,124 @@ export class NamespaceReference {
         return undefined;
     }
 
-    static constructFromNode(ctx: Ctx, node: ts.Node): NamespaceReference | undefined {
-        // We need to find a property assignment,
+    // vvv PA = Proprty Assignment
+    static constructFromKnownPANode(
+        ctx: Ctx,
+        namespacePANode: ts.Node
+    ): NamespaceReference | undefined {
+        // We expect a property assignment,
         // which has another property assignment inside
         // which has an identifier (of member-* or function)
 
-        let pluginReferenceConfig: PluginReferenceConfig = createNewPluginReferenceConfig();
+        const isPropertyAssignment = ts.isPropertyAssignment(namespacePANode);
 
-        const pluginNamespaceDeclaration = ctx.nodeUtils.getParentNodeByCondition(node, (namespacePANode) => {
-            const isPropertyAssignment = ts.isPropertyAssignment(namespacePANode);
+        if (!isPropertyAssignment) {
+            return undefined;
+        }
+
+        const pluginReferenceConfig = createNewPluginReferenceConfig();
+        // ^^^ reset for each parent (previous was not correct)
+
+        const pluginTypeDeclarations = ctx.nodeUtils.getNodeChildByCondition(namespacePANode, (typePANode) => {
+            const isPropertyAssignment = ts.isPropertyAssignment(typePANode);
 
             if (!isPropertyAssignment) {
                 return false;
             }
 
-            pluginReferenceConfig = createNewPluginReferenceConfig();
-            // ^^^ reset for each parent (previous was not correct)
+            const pluginTypeDeclarations = typePANode.getChildren().find((typeIdentifierNode) => {
+                const isIdentifier = ts.isStringLiteral(typeIdentifierNode) || ts.isIdentifier(typeIdentifierNode)
 
-            const pluginTypeDeclarations = ctx.nodeUtils.getNodeChildByCondition(namespacePANode, (typePANode) => {
-                const isPropertyAssignment = ts.isPropertyAssignment(typePANode);
-
-                if (!isPropertyAssignment) {
+                if (!isIdentifier) {
                     return false;
                 }
 
-                const pluginTypeDeclarations = typePANode.getChildren().find((typeIdentifierNode) => {
-                    const isIdentifier = ts.isStringLiteral(typeIdentifierNode) || ts.isIdentifier(typeIdentifierNode)
+                const typeIdentifier = typeIdentifierNode.getText().replace(/['"]/gm, '');
 
-                    if (!isIdentifier) {
-                        return false;
-                    }
+                if (typeIdentifier === FUNCTION_PLUGIN_TYPE) {
+                    // ^^^ can only then be a function
+                    pluginReferenceConfig[FUNCTION_PLUGIN_TYPE] = typeIdentifierNode;
+                    return true;
+                }
 
-                    const typeIdentifier = typeIdentifierNode.getText().replace(/['"]/gm, '');
+                if (
+                    typeIdentifier === CLASS_PLUGIN_METHOD_TYPE
+                    || typeIdentifier === CLASS_PLUGIN_PROPERTY_TYPE
+                    || typeIdentifier === CLASS_PLUGIN_STATIC_TYPE
+                ) {
+                    // vvv lookup pNode for plugin implementation references
+                    const childMethodAssignments = ctx.nodeUtils.getNodeChildByCondition(typePANode, (implementationPANode) => {
+                        const isPropertyAssignment = ts.isPropertyAssignment(implementationPANode)
 
-                    if (typeIdentifier === FUNCTION_PLUGIN_TYPE) {
-                        // ^^^ can only then be a function
-                        pluginReferenceConfig[FUNCTION_PLUGIN_TYPE] = typeIdentifierNode;
-                        return true;
-                    }
+                        if (!isPropertyAssignment) {
+                            return false;
+                        }
 
-                    if (
-                        typeIdentifier === CLASS_PLUGIN_METHOD_TYPE
-                        || typeIdentifier === CLASS_PLUGIN_PROPERTY_TYPE
-                        || typeIdentifier === CLASS_PLUGIN_STATIC_TYPE
-                    ) {
-                        // vvv lookup pNode for plugin implementation references
-                        const childMethodAssignments = ctx.nodeUtils.getNodeChildByCondition(typePANode, (implementationPANode) => {
-                            const isPropertyAssignment = ts.isPropertyAssignment(implementationPANode)
+                        const pluginImplementationDeclarationNodes = implementationPANode.getChildren().find((implementationDeclarationNode) => {
+                            const isIdentifier = ts.isStringLiteral(implementationDeclarationNode)
+                                || ts.isIdentifier(implementationDeclarationNode)
 
-                            if (!isPropertyAssignment) {
+                            if (!isIdentifier) {
                                 return false;
                             }
 
-                            const pluginImplementationDeclarationNodes = implementationPANode.getChildren().find((implementationDeclarationNode) => {
-                                const isIdentifier = ts.isStringLiteral(implementationDeclarationNode)
-                                    || ts.isIdentifier(implementationDeclarationNode)
+                            const implementationDeclaration = implementationDeclarationNode.getText().replace(/['"]/gm, '');
+                            pluginReferenceConfig[typeIdentifier][implementationDeclaration] = implementationDeclarationNode;
 
-                                if (!isIdentifier) {
-                                    return false;
-                                }
+                            return true;
+                        });
 
-                                const implementationDeclaration = implementationDeclarationNode.getText().replace(/['"]/gm, '');
-                                pluginReferenceConfig[typeIdentifier][implementationDeclaration] = implementationDeclarationNode;
+                        return !!pluginImplementationDeclarationNodes;
+                    }, 3, false);
 
-                                return true;
-                            });
-
-                            return !!pluginImplementationDeclarationNodes;
-                        }, 3, false);
-
-                        return childMethodAssignments.length > 0;
-                    }
-
-                    return false;
-                });
-
-                if (!pluginTypeDeclarations) {
-                    return false;
+                    return childMethodAssignments.length > 0;
                 }
 
-                return true;
-            }, 3, false);
+                return false;
+            });
 
-            return pluginTypeDeclarations.length > 0;
-        });
+            if (!pluginTypeDeclarations) {
+                return false;
+            }
 
-        if (!pluginNamespaceDeclaration) return undefined;
+            return true;
+        }, 3, false);
 
-        return new NamespaceReference(ctx, pluginNamespaceDeclaration, pluginReferenceConfig);
+        const isTypeDeclarationsPresent = pluginTypeDeclarations.length > 0;
+        
+        if (!isTypeDeclarationsPresent) {
+            return undefined;
+        }
+
+        return new NamespaceReference(ctx, namespacePANode, pluginReferenceConfig);
+    }
+
+    static constructFromNode(
+        ctx: Ctx,
+        node: ts.Node
+    ): NamespaceReference | undefined {
+        const namespaceReference = this.constructFromKnownPANode(ctx, node);
+
+        if (namespaceReference) {
+            return namespaceReference;
+        }
+
+        const parent = node.parent;
+
+        if (!parent) {
+            return undefined;
+        }
+
+        // vvv Try parent, if failed to construct from current node
+        return this.constructFromNode(
+            ctx,
+            parent
+        );
     }
 }
 
 export const getNamespacePluginsReferences = (ctx: Ctx, cache: Cache, comment: NamespaceDeclaration): ts.ReferencedSymbol[] => {
-    const plugins = cache.getReferencesByNamespace(comment.getNamespace());
+    const plugins = cache.getReferencesByNamespace(comment.getNamespaceString());
     const validPluginReferences: ts.ReferencedSymbol[] = [];
 
     for (const plugin of plugins) {
@@ -243,7 +268,7 @@ export const pluginNodeReferenceEntries = (ctx: Ctx, cache: Cache, node: ts.Node
 
     const targetConfig = comment.getTargetConfigForNode(node);
     if (!targetConfig) return references;
-    const plugins = cache.getReferencesByNamespace(comment.getNamespace());
+    const plugins = cache.getReferencesByNamespace(comment.getNamespaceString());
     if (!plugins.length) return references;
 
     for (const plugin of plugins) {
