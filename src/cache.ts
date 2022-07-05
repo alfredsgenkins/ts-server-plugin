@@ -153,20 +153,6 @@ export class Cache {
         return this.declarationMap[namespace];
     }
 
-    _addMessageToDiagnostics(newDiagnostic: ts.Diagnostic, diagnostic: ts.Diagnostic[]) {
-        const { code } = newDiagnostic;
-        const isNewDiagnosticAlreadyInDiagnostics = diagnostic.some(({ code: exCode }) => code === exCode);
-
-        if (isNewDiagnosticAlreadyInDiagnostics) {
-            return diagnostic;
-        }
-
-        return [
-            ...diagnostic,
-            
-        ]
-    }
-
     getDiagnosticsByFile(fileName: string): ts.Diagnostic[] {
         const refsOrDecs = this.fileToNamespaceMap[fileName] || [];
 

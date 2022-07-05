@@ -19,6 +19,7 @@ export class NamespaceDeclaration {
     ctx: Ctx;
     namespace: string = '';
     nIndex: number = -1;
+    heritage: ts.ClassDeclaration[] = [];
 
     constructor(
         ctx: Ctx,
@@ -26,6 +27,14 @@ export class NamespaceDeclaration {
     ) {
         this.ctx = ctx;
         this.node = commentNode;
+
+        const targetMainType = this.node.parent.parent;
+
+        if (!ts.isClassDeclaration(targetMainType)) {
+            return;
+        }
+
+        this.heritage = this.ctx.nodeUtils.getClassNodeHeritage(targetMainType);
     }
 
     getNamespaceString(): string {
@@ -142,7 +151,6 @@ export class NamespaceDeclaration {
     getNodeByTargetConfig(config: PluginTargetConfig): ts.Node | undefined {
         const { type, name } = config;
         const targetMainType = this.node.parent.parent;
-        // ^^^ TODO: assume heritageClauses may be present
 
         if (
             type === FUNCTION_PLUGIN_TYPE
@@ -161,10 +169,8 @@ export class NamespaceDeclaration {
             return undefined;
         }
 
-        const heritage = this.ctx.nodeUtils.getClassNodeHeritage(targetMainType);
-
-        for (let i = 0; i < heritage.length; i++) {
-            const classDec = heritage[i];
+        for (let i = 0; i < this.heritage.length; i++) {
+            const classDec = this.heritage[i];
             
             const matchingTarget = this.ctx.nodeUtils.getNodeChildByCondition(classDec, (node) => {
                 if (

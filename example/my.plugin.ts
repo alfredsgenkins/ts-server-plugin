@@ -11,6 +11,11 @@ export default {
             b: () => 11,
         }
     },
+    'Start/Me': {
+        'member-function': {
+            method: pluginForMethod,
+        }
+    },
     'Wrong/Namespace': {
         'function': () => {}
     },
