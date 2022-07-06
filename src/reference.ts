@@ -18,6 +18,7 @@ export class NamespaceReference {
     config: PluginReferenceConfig;
 
     namespace?: ts.Node;
+    namespaceStringCache?: string;
 
     constructor(ctx: Ctx, node: ts.Node, config: PluginReferenceConfig) {
         this.node = node;
@@ -26,6 +27,10 @@ export class NamespaceReference {
     }
 
     getNamespaceString(): string {
+        if (this.namespaceStringCache) {
+            return this.namespaceStringCache;
+        }
+
         const namespace = this.getNamespace();
 
         if (!namespace) {
@@ -33,7 +38,10 @@ export class NamespaceReference {
         }
 
         // this removes all quotes
-        return namespace.getText().replace(/['"]/gm, '');
+        const cached = namespace.getText().replace(/['"]/gm, '');
+        this.namespaceStringCache = cached;
+
+        return cached;
     }
 
     getNamespace(): ts.Node | undefined {

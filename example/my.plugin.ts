@@ -11,7 +11,7 @@ export default {
             b: () => 11,
         }
     },
-    'Start/Me': {
+    'Me/1': {
         'member-function': {
             method: pluginForMethod,
         }

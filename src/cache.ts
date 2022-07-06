@@ -57,10 +57,16 @@ export class Cache {
                 return;
             }
 
-            // vvv Flush reference cache
+            if (!this.referenceMap[namespace]) {
+                // ^^^ This namespace no longer exists ?
+                // (fixed by caching namespace)
+                return;
+            }
+
+            // vvv Flush reference cache (filter out ones not matching the current)
             this.referenceMap[namespace] = this.referenceMap[namespace].filter((ref) => {
-                const isSameRef = ref !== decOrRef;
-                return isSameRef;
+                const isNotSameRef = ref !== decOrRef;
+                return isNotSameRef;
             })
         })
 
@@ -151,6 +157,20 @@ export class Cache {
         }
 
         return this.declarationMap[namespace];
+    }
+
+    _addMessageToDiagnostics(newDiagnostic: ts.Diagnostic, diagnostic: ts.Diagnostic[]) {
+        const { code } = newDiagnostic;
+        const isNewDiagnosticAlreadyInDiagnostics = diagnostic.some(({ code: exCode }) => code === exCode);
+
+        if (isNewDiagnosticAlreadyInDiagnostics) {
+            return diagnostic;
+        }
+
+        return [
+            ...diagnostic,
+            
+        ]
     }
 
     getDiagnosticsByFile(fileName: string): ts.Diagnostic[] {

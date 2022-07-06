@@ -1,4 +1,4 @@
-/** @namespace Me */
+/** @namespace Me/1 */
 class Start {
     method() {
         return 123;
