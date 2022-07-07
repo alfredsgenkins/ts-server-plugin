@@ -25,7 +25,7 @@ export const createNewPluginReferenceConfig = (): PluginReferenceConfig => ({
 });
 
 export type PluginTargetConfig = {
-    name: string,
+    name?: string,
     type: typeof CLASS_PLUGIN_PROPERTY_TYPE
         | typeof CLASS_PLUGIN_METHOD_TYPE
         | typeof CLASS_PLUGIN_STATIC_TYPE

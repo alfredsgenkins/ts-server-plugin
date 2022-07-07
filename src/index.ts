@@ -7,6 +7,7 @@ import {
     implementationNodeReferenceEntries
 } from "./reference";
 import { Cache } from "./cache";
+import { handleReferenceCompletions } from "./completions";
 
 function init() {
     function create(info: ts.server.PluginCreateInfo) {
@@ -33,13 +34,6 @@ function init() {
             cache.refreshFileCache(fileName);
             return [...diagnostics, ...cache.getDiagnosticsByFile(fileName)];
         };
-
-        // // is called on every change
-        // proxy.getSemanticDiagnostics = (fileName: string): ts.Diagnostic[] => {
-        //     const diagnostics = info.languageService.getSemanticDiagnostics(fileName);
-        //     // cache.cacheFile(fileName);
-        //     return diagnostics;
-        // }
 
         proxy.findReferences = (fileName: string, position: number): ts.ReferencedSymbol[] | undefined => {
             const prior = info.languageService.findReferences(fileName, position);
@@ -87,6 +81,15 @@ function init() {
                 definitions: [comment.getDefinition()]
             };
         };
+
+        proxy.getCompletionsAtPosition = (
+            fileName: string,
+            position: number,
+            ...rest
+        ): ts.WithMetadata<ts.CompletionInfo> | undefined => {
+            const prior = info.languageService.getCompletionsAtPosition(fileName, position, ...rest);
+            return handleReferenceCompletions(fileName, position, prior, ctx, cache);
+        }
 
         return proxy;
     }

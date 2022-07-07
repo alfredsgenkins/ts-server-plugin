@@ -20,6 +20,7 @@ export class NamespaceDeclaration {
     namespace: string = '';
     nIndex: number = -1;
     heritage: ts.ClassDeclaration[] = [];
+    isFunctionDeclaration: boolean;
 
     constructor(
         ctx: Ctx,
@@ -31,9 +32,11 @@ export class NamespaceDeclaration {
         const targetMainType = this.node.parent.parent;
 
         if (!ts.isClassDeclaration(targetMainType)) {
+            this.isFunctionDeclaration = true;
             return;
         }
 
+        this.isFunctionDeclaration = false;
         this.heritage = this.ctx.nodeUtils.getClassNodeHeritage(targetMainType);
     }
 
@@ -148,7 +151,7 @@ export class NamespaceDeclaration {
         return this.ctx.nodeUtils.getReferenceForNode(this.node, this.getTextSpan);
     }
 
-    getNodeByTargetConfig(config: PluginTargetConfig): ts.Node | undefined {
+    getNodesByTargetConfig(config: PluginTargetConfig): ts.Node[] {
         const { type, name } = config;
         const targetMainType = this.node.parent.parent;
 
@@ -159,23 +162,25 @@ export class NamespaceDeclaration {
                 ts.isFunctionDeclaration(targetMainType)
                 || ts.isVariableDeclaration(targetMainType)
             ) {
-                return targetMainType
+                return [targetMainType];
             }
 
-            return undefined;
+            return [];
         }
 
         if (!ts.isClassDeclaration(targetMainType)) {
-            return undefined;
+            return [];
         }
+
+        const multipleResults = [];
 
         for (let i = 0; i < this.heritage.length; i++) {
             const classDec = this.heritage[i];
             
-            const matchingTarget = this.ctx.nodeUtils.getNodeChildByCondition(classDec, (node) => {
+            const matchingTargets = this.ctx.nodeUtils.getNodeChildByCondition(classDec, (node) => {
                 if (
                     !ts.isIdentifier(node)
-                    || node.escapedText !== name
+                    || (name && node.escapedText !== name)
                 ) {
                     return false;
                 }
@@ -201,15 +206,16 @@ export class NamespaceDeclaration {
                     )
                 );
             });
-    
-            if (matchingTarget.length > 0) {
-                return matchingTarget[0];
-            }
 
-            // ^^^ countinue the loop, if no results found
+            multipleResults.push(...matchingTargets);
         }
 
-        return undefined;
+        return multipleResults;
+    }
+
+    getNodeByTargetConfig(config: PluginTargetConfig): ts.Node | undefined {
+        const [result] = this.getNodesByTargetConfig(config);
+        return result;
     }
 
     static constructFromNode(ctx: Ctx, node: ts.Node): NamespaceDeclaration | undefined {

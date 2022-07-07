@@ -8,7 +8,7 @@ export default {
             method: pluginForMethod,
             method3: () => 123,
             a: () => 11,
-            b: () => 11,
+            b: () => 11
         }
     },
     'Me/1': {
@@ -21,5 +21,5 @@ export default {
     },
     'Test': {
         'function': pluginForMethod
-    }
+    },
 }
