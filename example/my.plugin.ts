@@ -8,18 +8,18 @@ export default {
             method: pluginForMethod,
             method3: () => 123,
             a: () => 11,
-            b: () => 11
-        }
-    },
-    'Me/1': {
-        'member-function': {
-            method: pluginForMethod,
+            b: () => 11,
         }
     },
     'Wrong/Namespace': {
         'function': () => {}
     },
     'Test': {
-        'function': pluginForMethod
+        'function': pluginForMethod,
     },
+    'Me/1': {
+        'member-function': {
+            'method': () => {}
+        }
+    }
 }

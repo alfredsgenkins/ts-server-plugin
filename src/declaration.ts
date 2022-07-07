@@ -6,6 +6,7 @@ import {
     CLASS_PLUGIN_PROPERTY_TYPE,
     CLASS_PLUGIN_STATIC_TYPE,
     FUNCTION_PLUGIN_TYPE,
+    PartialPluginTargetConfig,
     PluginTargetConfig
 } from "./util/config";
 
@@ -151,7 +152,7 @@ export class NamespaceDeclaration {
         return this.ctx.nodeUtils.getReferenceForNode(this.node, this.getTextSpan);
     }
 
-    getNodesByTargetConfig(config: PluginTargetConfig): ts.Node[] {
+    getNodesByTargetConfig(config: PartialPluginTargetConfig): ts.Node[] {
         const { type, name } = config;
         const targetMainType = this.node.parent.parent;
 

@@ -138,22 +138,41 @@ export const handleReferenceCompletions = (
         return prior;
     }
 
-    if (prior !== undefined) {
-        // TODO: handle non-string object key
-        return prior;
-    }
-
-    // vvv In case we are typing a string object key
-    const completionNode = ctx.nodeUtils.getFileNodeAtPosition(fileName, position);
+    const completionNode = ctx.nodeUtils.getFileNodeAtPosition(
+        fileName,
+        position - 1
+        // ^^^ Get one before
+    );
 
     if (
         !completionNode
         || !completionNode.parent
-        || !ts.isPropertyAssignment(completionNode.parent)
+        || !(
+            // vvv We expect to see PA
+            ts.isPropertyAssignment(completionNode.parent)
+            || ts.isShorthandPropertyAssignment(completionNode.parent)
+        )
     ) {
         // We only care about strings, part of PA
         return prior;
     }
 
     const completions = getCompletionStringsForNode(completionNode, ctx, cache);
+    const completionEntries: ts.CompletionEntry[] = completions.map((completion) => ({
+        name: completion,
+        kind: ts.ScriptElementKind.constElement,
+        sortText: '1'
+    }));
+
+    if (prior) {
+        prior.entries.push(...completionEntries);
+        return prior;
+    }
+
+    return {
+        isGlobalCompletion: false,
+        isMemberCompletion: false,
+        isNewIdentifierLocation: true,
+        entries: completionEntries
+    }
 }

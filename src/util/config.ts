@@ -24,8 +24,16 @@ export const createNewPluginReferenceConfig = (): PluginReferenceConfig => ({
     [FUNCTION_PLUGIN_TYPE]: undefined,
 });
 
-export type PluginTargetConfig = {
+export type PartialPluginTargetConfig = {
     name?: string,
+    type: typeof CLASS_PLUGIN_PROPERTY_TYPE
+        | typeof CLASS_PLUGIN_METHOD_TYPE
+        | typeof CLASS_PLUGIN_STATIC_TYPE
+        | typeof FUNCTION_PLUGIN_TYPE,
+}
+
+export type PluginTargetConfig = {
+    name: string,
     type: typeof CLASS_PLUGIN_PROPERTY_TYPE
         | typeof CLASS_PLUGIN_METHOD_TYPE
         | typeof CLASS_PLUGIN_STATIC_TYPE
