@@ -11,6 +11,10 @@ class Abc extends Bca {
         return '123';
     }
 
+    method() {
+        return 1;
+    }
+
     method3() {
         return '444';
     }

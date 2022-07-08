@@ -177,6 +177,7 @@ export class NamespaceReference {
                     // vvv lookup pNode for plugin implementation references
                     const childMethodAssignments = ctx.nodeUtils.getNodeChildByCondition(typePANode, (implementationPANode) => {
                         const isPropertyAssignment = ts.isPropertyAssignment(implementationPANode)
+                            || ts.isShorthandPropertyAssignment(implementationPANode);
 
                         if (!isPropertyAssignment) {
                             return false;

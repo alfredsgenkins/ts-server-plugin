@@ -2,12 +2,16 @@ const pluginForMethod = () => {
     return 'ABC';
 };
 
+const a = () => {
+    return '111';
+};
+
 export default {
     'Hello/World': {
         'member-function': {
             method: pluginForMethod,
             method3: () => 123,
-            a: () => 11,
+            a,
             b: () => 11,
         }
     },
