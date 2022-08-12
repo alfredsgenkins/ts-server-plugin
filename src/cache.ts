@@ -3,6 +3,8 @@ import { NamespaceDeclaration } from "./declaration";
 import { NamespaceReference } from "./reference";
 import { ClassPluginTypes, CLASS_PLUGIN_METHOD_TYPE, CLASS_PLUGIN_PROPERTY_TYPE, CLASS_PLUGIN_STATIC_TYPE, FUNCTION_PLUGIN_TYPE } from "./util/config";
 import { Ctx } from "./util/context";
+import { getAllThemeFiles } from "./util/parent-theme";
+// import { getParentThemePaths } from '@tilework/scandipwa-dev-utils/parent-theme';
 
 type DeclarationCacheMap = Record<string, NamespaceDeclaration>;
 type ReferenceCacheMap = Record<string, Array<NamespaceReference>>;
@@ -37,7 +39,17 @@ export class Cache {
             this.hasCachedAll = true;
         }
 
-        for (const sourceFile of sourceFiles) {
+        const themeFiels = getAllThemeFiles(program.getCurrentDirectory())
+
+        const moreSourceFiles = themeFiels.reduce((acc, file) => {
+            const sourceFile = program.getSourceFileByPath(
+                Object.assign(file, { __pathBrand: undefined })
+            );
+
+            return sourceFile ? [...acc, sourceFile] : acc;
+        }, [] as ts.SourceFile[]);
+
+        for (const sourceFile of [...moreSourceFiles, ...sourceFiles]) {
             this.refreshBySourceFile(sourceFile);
         }
     }
