@@ -27,7 +27,7 @@ export class NodeUtils {
                     node.getSourceFile().fileName,
                     identifierPosition
                 );
-                
+
                 if (!classDefintions || classDefintions.length <= 0) {
                     return acc;
                 }
@@ -108,11 +108,14 @@ export class NodeUtils {
 
         const find = (node: ts.Node, depth: number, validateNode: Boolean) => {
             if (depth > maxDepth) return;
+            // ^^^ ignore nodes without source file ?
 
             if (validateNode && cond(node)) {
                 result.push(node);
                 return;
             } else {
+                if (!node.getSourceFile()) return;
+
                 for (let i = 0; i < node.getChildren().length; i++) {
                     find(node.getChildren()[i], depth + 1, true);
                 }

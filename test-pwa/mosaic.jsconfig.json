@@ -2,6 +2,7 @@
     "compilerOptions": {
         "baseUrl": "./",
         "jsx": "react",
+        "allowJs": true,
         "plugins": [{
             "name": "tsserver-plugin"
         }],

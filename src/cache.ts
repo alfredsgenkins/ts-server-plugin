@@ -4,7 +4,6 @@ import { NamespaceReference } from "./reference";
 import { ClassPluginTypes, CLASS_PLUGIN_METHOD_TYPE, CLASS_PLUGIN_PROPERTY_TYPE, CLASS_PLUGIN_STATIC_TYPE, FUNCTION_PLUGIN_TYPE } from "./util/config";
 import { Ctx } from "./util/context";
 import { getAllThemeFiles } from "./util/parent-theme";
-// import { getParentThemePaths } from '@tilework/scandipwa-dev-utils/parent-theme';
 
 type DeclarationCacheMap = Record<string, NamespaceDeclaration>;
 type ReferenceCacheMap = Record<string, Array<NamespaceReference>>;
@@ -12,9 +11,10 @@ type FileToNamespaceMap = Record<string, Array<NamespaceReference | NamespaceDec
 
 export class Cache {
     ctx: Ctx;
+    mosaicSourceFiles: ts.SourceFile[] | undefined;
+    mosaicProgram: ts.Program | undefined;
 
     hasCachedAll = false;
-
     declarationMap: DeclarationCacheMap = {};
     referenceMap: ReferenceCacheMap = {};
     fileToNamespaceMap: FileToNamespaceMap = {};
@@ -29,27 +29,71 @@ export class Cache {
         this.ctx = ctx;
     }
 
-    cacheAllFiles(): void {
+    getProgramSourceFiles(): readonly ts.SourceFile[] {
         const program = this.ctx.info.project.getLanguageService().getProgram();
-        if (!program) return;
+        if (!program) return [];
         const sourceFiles = program.getSourceFiles();
-        if (!sourceFiles) return;
+        if (!sourceFiles) return [];
+        return sourceFiles;
+    }
 
-        if (sourceFiles.length > 0) {
+    getSourceFileByPath(fileName: string, tryCount = 0): ts.SourceFile | undefined {
+        const program = this.ctx.info.project.getLanguageService().getProgram();
+        if (!program || tryCount > 1) return;
+        // ^^^ Allow only one try to get the source file
+
+        const sourceFile = program.getSourceFile(fileName);
+
+        if (sourceFile) {
+            return sourceFile;
+        }
+
+        // vvv Add file as new source file
+        this.ctx.info.project.addMissingFileRoot(fileName as ts.server.NormalizedPath);
+
+        return this.getSourceFileByPath(fileName, tryCount + 1);
+    }
+
+    getMosaicSourceFiles(): ts.SourceFile[] {
+        if (this.mosaicSourceFiles) {
+            return this.mosaicSourceFiles;
+        }
+
+        const program = this.ctx.info.project.getLanguageService().getProgram();
+        if (!program) return [];
+
+        const themeFiles = getAllThemeFiles(program.getCurrentDirectory());
+
+        const moreSourceFiles = themeFiles.reduce((acc, fileName) => {
+            const sourceFile = this.getSourceFileByPath(fileName);
+
+            if (!sourceFile) {
+                return acc;
+            }
+
+            return[...acc, sourceFile];
+        }, [] as ts.SourceFile[]);
+
+        this.mosaicSourceFiles = moreSourceFiles;
+
+        return this.mosaicSourceFiles;
+    }
+
+    getAllSourceFiles(): ts.SourceFile[] {
+        return [
+            ...this.getMosaicSourceFiles(),
+            ...this.getProgramSourceFiles()
+        ];
+    }
+
+    cacheAllFiles(): void {
+        const allSourceFiles = this.getAllSourceFiles();
+
+        if (allSourceFiles.length > 0) {
             this.hasCachedAll = true;
         }
 
-        const themeFiels = getAllThemeFiles(program.getCurrentDirectory())
-
-        const moreSourceFiles = themeFiels.reduce((acc, file) => {
-            const sourceFile = program.getSourceFileByPath(
-                Object.assign(file, { __pathBrand: undefined })
-            );
-
-            return sourceFile ? [...acc, sourceFile] : acc;
-        }, [] as ts.SourceFile[]);
-
-        for (const sourceFile of [...moreSourceFiles, ...sourceFiles]) {
+        for (const sourceFile of allSourceFiles) {
             this.refreshBySourceFile(sourceFile);
         }
     }
@@ -143,10 +187,7 @@ export class Cache {
     }
 
     refreshFileCache(fileName: string) {
-        const program = this.ctx.info.project.getLanguageService().getProgram();
-        if (!program) return;
-        const sourceFiles = program.getSourceFiles();
-        if (!sourceFiles) return;
+        const sourceFiles = this.getAllSourceFiles();
         const sourceFile = sourceFiles.find(s => s.fileName === fileName);
         if (!sourceFile) return;
 
@@ -169,20 +210,6 @@ export class Cache {
         }
 
         return this.declarationMap[namespace];
-    }
-
-    _addMessageToDiagnostics(newDiagnostic: ts.Diagnostic, diagnostic: ts.Diagnostic[]) {
-        const { code } = newDiagnostic;
-        const isNewDiagnosticAlreadyInDiagnostics = diagnostic.some(({ code: exCode }) => code === exCode);
-
-        if (isNewDiagnosticAlreadyInDiagnostics) {
-            return diagnostic;
-        }
-
-        return [
-            ...diagnostic,
-            
-        ]
     }
 
     getDiagnosticsByFile(fileName: string): ts.Diagnostic[] {

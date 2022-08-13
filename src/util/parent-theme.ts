@@ -50,9 +50,9 @@ const getAllFilesFromPath = (pathname: string): string[] => {
 
         if (!fs.statSync(filePath).isDirectory()) {
             if (!(/\.[tj]sx?$/gm.test(file))) {
-                // ^^^ Ingore non-js files
+                // ^^^ Ignore non-js files
                 return acc;
-            }    
+            }
 
             return [...acc, filePath];
         }

@@ -9,7 +9,8 @@
         "@scandiweb/test-ts-package": "file:packages/google-tag-manager",
         "@tilework/mosaic": "^0.1.4",
         "@tilework/mosaic-craco": "^0.0.5",
-        "tsserver-plugin": "link:.."
+        "tsserver-plugin": "link:..",
+        "typescript": "4.4.3"
     },
     "scandipwa": {
         "type": "theme",

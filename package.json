@@ -7,8 +7,8 @@
         "start": "tsc --watch --sourceMap --outDir ./out"
     },
     "dependencies": {
-        "@scandipwa/scandipwa-dev-utils": "^0.1.14",
-        "tsc": "^2.0.4",
-        "typescript": "^4.4.3"
+        "@scandipwa/scandipwa-dev-utils": "0.1.14",
+        "tsc": "2.0.4",
+        "typescript": "4.4.3"
     }
 }
