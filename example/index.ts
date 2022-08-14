@@ -1,6 +1,6 @@
 // Edit this file to trigger the TSServer commands.
 
-import { Bca } from "./aa";
+import { Bca } from "./inside";
 
 /**
  * @namespace Hello/World
