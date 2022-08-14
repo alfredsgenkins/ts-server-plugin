@@ -1,52 +1,62 @@
-## A Template for a TypeScript Language Service Plugin
+## Description
 
-<img src="./docs/screenshot.png">
+Plugin to support [ScandiPWA plugin system](https://docs.create-scandipwa-app.com/extensions/application-plugins).
 
-This repo has two projects: s
+## Instructions
 
-- `/` is a TSServer Plugin 
-- `/example` is a TypeScript project which uses the root TSServer Plugin
+In first terminal (compile plugin):
 
-The source files for your project
-
-#### Get Started
-
-Get the plugin working and your TS to JS converted as you save:
-
-```ts
-git clone https://github.com/orta/TypeScript-TSServer-Plugin-Template
-cd TypeScript-TSServer-Plugin-Template
-
-# Install deps and run TypeScript
-npm i
-npx tsc --watch
+```bash
+yarn
+yarn start
 ```
 
-Next, get the example project up and running, it will load your TSServer Plugin from the emitted JavaScript.
+In second terminal (prepare test env):
 
-```
-# Set up the host app to work in
+```bash
 cd example
-npm i
-cd ..
-
-# Open one VS Code window to work on your plugin
+yarn
 code .
-
-# Or to hook up a debugger, use this command
-# to have the TSServer wait till you attach:
-TSS_DEBUG_BRK=9559 code example
-
-# or use this to hook in later:
-TSS_DEBUG=9559 code example
 ```
 
-You can then use the launch options in this root project to connect your debugger to the running TSServer in the other window. To see changes, run the command palette "TypeScript: Reload Project" to restart the TSServer for the project.
+## Features
 
-Make sure that the TypeScript version on that project runs from your `node_modules` and not the version which is embedded in vscode. You can see the logs via the vscode command 'TypeScript: Open TS Server Logs." ( search for 'Loading tsserver-plugin' to see whether it loaded correctly. )
+- Makes ScandiPWA namespace JSX comment "clickable", aka. allow to find reference for it, for example:
 
-### What Now?
+```js
+               vvv This text can be clicked
+/** @namespace Hello/World */
+```
 
-This project has a `debugger` statement inside the completions which will trigger on completions, you can get that running and then you have proven the toolset works and get started building your plugin.
+- Connects namespace declarations with their definitions, aka. clicking on namespace comment, we find references to it in all plugins (for classes, functions) and visa-versa (you can navigate from plugin to a definition)
 
-You can read up the docs on [Language Service Plugins in the TypeScript repo wiki](https://github.com/microsoft/TypeScript/wiki/Writing-a-Language-Service-Plugin#overview-writing-a-simple-plugin).
+```js
+               vvv Clicking here
+/** @namespace Hello/World */
+function A() {}
+
+export default {
+    'Hello/World': {
+        // vvv You are redirected here
+        function: (args, callback) => {}
+    }
+}
+```
+
+- If a property / method / function has a plugin, it highlights it in code, using inline hints feature, like so:
+
+```js
+class A {
+    b() has 2 plugins {}
+}
+```
+
+- Shows warnings for all namespaces that do not exist in the application, and all non-existent methods:
+
+```js
+export default {
+    'Abc': { Such namespace is not declared
+        function: () => {}
+    }
+}
+```
