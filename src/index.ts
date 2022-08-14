@@ -1,5 +1,8 @@
 import ts from "typescript/lib/tsserverlibrary";
-import { getCommentAtPosition } from './declaration';
+import {
+    getCommentAtPosition,
+    NamespaceDeclaration
+} from './declaration';
 import { Ctx } from "./util/context";
 import {
     pluginNodeReferenceEntries,
@@ -27,6 +30,13 @@ function init() {
             const x = info.languageService[k]!;
             // @ts-expect-error - JS runtime trickery which is tricky to type tersely
             proxy[k] = (...args: Array<{}>) => x.apply(info.languageService, args);
+        }
+
+        proxy.provideInlayHints = (fileName: string, span: ts.TextSpan): ts.InlayHint[] => {
+            // vvv Ignore original inline hints
+            return cache.getDeclarationInlayHintsForFile(fileName).filter((inlayHint) => {
+                return inlayHint.position > span.start && inlayHint.position < span.start + span.length;
+            });
         }
 
         proxy.getSemanticDiagnostics = (fileName: string): ts.Diagnostic[] => {

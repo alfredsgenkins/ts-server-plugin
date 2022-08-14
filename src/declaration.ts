@@ -152,7 +152,7 @@ export class NamespaceDeclaration {
         return this.ctx.nodeUtils.getReferenceForNode(this.node, this.getTextSpan);
     }
 
-    getNodesByTargetConfig(config: PartialPluginTargetConfig): ts.Node[] {
+    getNodesByTargetConfig(config: PartialPluginTargetConfig = {}): ts.Node[] {
         const { type, name } = config;
         const targetMainType = this.node.parent.parent;
 
@@ -177,7 +177,7 @@ export class NamespaceDeclaration {
 
         for (let i = 0; i < this.heritage.length; i++) {
             const classDec = this.heritage[i];
-            
+
             const matchingTargets = this.ctx.nodeUtils.getNodeChildByCondition(classDec, (node) => {
                 if (
                     !ts.isIdentifier(node)
@@ -185,27 +185,30 @@ export class NamespaceDeclaration {
                 ) {
                     return false;
                 }
-    
+
                 const parent = node.parent;
                 const isStatic = !!parent.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.StaticKeyword);
-    
+                const isMethod = ts.isMethodDeclaration(parent) || ts.isPropertyDeclaration(parent);
+                // ^^^ special case for arrow functions !!!
+                const isProperty = ts.isPropertyDeclaration(parent)
+
+                if (!type && (isMethod || isProperty)) {
+                    return true;
+                }
+
                 if (isStatic) {
                     return type === CLASS_PLUGIN_STATIC_TYPE;
                 }
-    
-                return (
-                    (
-                        type === CLASS_PLUGIN_METHOD_TYPE
-                        && (
-                            ts.isMethodDeclaration(parent)
-                            || ts.isPropertyDeclaration(parent)
-                            // ^^^ special case for arrow functions !!!
-                        )
-                    ) || (
-                        type === CLASS_PLUGIN_PROPERTY_TYPE
-                        && ts.isPropertyDeclaration(parent)
-                    )
-                );
+
+                if (isProperty) {
+                    return type === CLASS_PLUGIN_PROPERTY_TYPE;
+                }
+
+                if (isMethod) {
+                    return type === CLASS_PLUGIN_METHOD_TYPE;
+                }
+
+                return false;
             });
 
             multipleResults.push(...matchingTargets);
