@@ -16,8 +16,10 @@ In second terminal (prepare test env):
 ```bash
 cd example
 yarn
-code .
+TSS_DEBUG=9559 code .
 ```
+
+You can use the pre-configured `Attach to VS Code TS Server` to debug plugin operation in `example` folder.
 
 ## Features
 
