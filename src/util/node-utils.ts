@@ -11,7 +11,7 @@ export class NodeUtils {
         if (!node.heritageClauses) {
             return [node];
         }
-        
+
         const extendsHeritageClauses = node.heritageClauses.filter((heritageClause) => (
             heritageClause.token === ts.SyntaxKind.ExtendsKeyword
             && heritageClause.types.length > 0
@@ -23,28 +23,28 @@ export class NodeUtils {
                 extendsHeritageClause: ts.HeritageClause
             ) => {
                 const identifierPosition = extendsHeritageClause.types[0].getStart()
-                const classDefintions = this.info.languageService.getDefinitionAtPosition(
+                const classDefinitions = this.info.languageService.getDefinitionAtPosition(
                     node.getSourceFile().fileName,
                     identifierPosition
                 );
 
-                if (!classDefintions || classDefintions.length <= 0) {
+                if (!classDefinitions || classDefinitions.length <= 0) {
                     return acc;
                 }
 
-                const [classDefintion] = classDefintions;
+                const [classDefintion] = classDefinitions;
 
-                const defintionNode = this.getFileNodeAtPosition(
+                const definitionNode = this.getFileNodeAtPosition(
                     classDefintion.fileName,
                     classDefintion.textSpan.start
                 );
 
-                if (!defintionNode) {
+                if (!definitionNode) {
                     return acc;
                 }
 
                 const classDeclaration = this.getParentNodeByCondition(
-                    defintionNode,
+                    definitionNode,
                     (node) => ts.isClassDeclaration(node)
                 );
 
@@ -159,8 +159,7 @@ export class NodeUtils {
         return {
             textSpan,
             fileName: node.getSourceFile().fileName,
-            isWriteAccess: true, // TODO: get if this plugin is editable
-            isDefinition: false,
+            isWriteAccess: true // TODO: get if this plugin is editable
         }
     }
 }

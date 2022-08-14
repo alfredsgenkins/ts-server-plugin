@@ -157,16 +157,15 @@ export class NamespaceDeclaration {
         const targetMainType = this.node.parent.parent;
 
         if (
-            type === FUNCTION_PLUGIN_TYPE
+            ts.isFunctionDeclaration(targetMainType)
+            || ts.isVariableDeclaration(targetMainType)
+            || ts.isVariableStatement(targetMainType)
         ) {
-            if (
-                ts.isFunctionDeclaration(targetMainType)
-                || ts.isVariableDeclaration(targetMainType)
-            ) {
-                return [targetMainType];
+            if (type && type !== FUNCTION_PLUGIN_TYPE) {
+                return [];
             }
 
-            return [];
+            return [targetMainType];
         }
 
         if (!ts.isClassDeclaration(targetMainType)) {

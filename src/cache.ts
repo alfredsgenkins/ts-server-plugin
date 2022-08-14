@@ -306,8 +306,6 @@ export class Cache {
                 const nodeFileName = node.getSourceFile().fileName;
                 if (nodeFileName !== fileName) return acc;
                 // ^^^ we only care about nodes in the same file
-                const targetConfig = refOrDec.getTargetConfigForNode(node);
-                if (!targetConfig) return acc;
                 const plugins = this.getReferencesByNamespace(refOrDec.getNamespaceString());
                 if (!plugins.length) return acc;
 

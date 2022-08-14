@@ -9,6 +9,6 @@
     "dependencies": {
         "@scandipwa/scandipwa-dev-utils": "0.1.14",
         "tsc": "2.0.4",
-        "typescript": "4.4.3"
+        "typescript": "^4.7.4"
     }
 }

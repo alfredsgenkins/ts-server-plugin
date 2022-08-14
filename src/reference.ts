@@ -214,7 +214,7 @@ export class NamespaceReference {
         }, 3, false);
 
         const isTypeDeclarationsPresent = pluginTypeDeclarations.length > 0;
-        
+
         if (!isTypeDeclarationsPresent) {
             return undefined;
         }
