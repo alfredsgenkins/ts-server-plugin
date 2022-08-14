@@ -11,6 +11,10 @@
     "css.validate": false,
     "scss.validate": false,
     "typescript.tsdk": "./node_modules/typescript/lib",
-    "typescript.tsserver.log": "verbose",
-    "typescript.enablePromptUseWorkspaceTsdk": true
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "editor.inlayHints.enabled": "on",
+    "javascript.inlayHints.functionLikeReturnTypes.enabled": true,
+    "javascript.inlayHints.propertyDeclarationTypes.enabled": true,
+    "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+    "typescript.inlayHints.propertyDeclarationTypes.enabled": true
 }
