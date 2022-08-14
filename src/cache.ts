@@ -254,7 +254,7 @@ export class Cache {
                 CLASS_PLUGIN_METHOD_TYPE,
                 CLASS_PLUGIN_STATIC_TYPE,
             ].reduce((acc, type) => {
-                const methodMap = config[type as ClassPluginTypes];
+                const methodMap: Record<string, ts.Node> = config[type as ClassPluginTypes];
 
                 const methodDiagnostics = Object.entries(methodMap).reduce(
                     (cAcc, [methodName, referenceMethod]) => {
