@@ -30,7 +30,7 @@ const getExportDepth = (node: ts.Node, accDepth: number = 0): number => {
     if (ts.isExportAssignment(node)) {
         return accDepth;
     }
-    
+
     if (!node.parent) {
         return -1;
     }

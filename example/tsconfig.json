@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "plugins": [{
-      "name": "tsserver-plugin"
+      "name": "@scandipwa/ts-server-plugin"
     }],
     "target": "es2017",
     "module": "commonjs",

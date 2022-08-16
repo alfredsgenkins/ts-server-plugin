@@ -1,7 +1,7 @@
 {
     "name": "example-tsc-codebase",
     "dependencies": {
-        "tsserver-plugin": "link:..",
+        "@scandipwa/ts-server-plugin": "link:..",
         "typescript": "^4.7.4"
     }
 }
